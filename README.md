@@ -1,2 +1,2 @@
-# cse340-practice-PALOMBO
+# cse340-practice-palombo
 Practice project for CSE 340
