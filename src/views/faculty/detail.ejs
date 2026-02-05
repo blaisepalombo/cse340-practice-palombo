@@ -1,0 +1,22 @@
+<%- include('../partials/header') %>
+
+<main>
+  <h1><%= faculty.name %></h1>
+
+  <div class="faculty-detail">
+    <p><strong>Title:</strong> <%= faculty.title %></p>
+    <p><strong>Department:</strong> <%= faculty.department %></p>
+    <p><strong>Office:</strong> <%= faculty.office %></p>
+    <p><strong>Phone:</strong> <%= faculty.phone %></p>
+    <p>
+      <strong>Email:</strong>
+      <a href="mailto:<%= faculty.email %>"><%= faculty.email %></a>
+    </p>
+  </div>
+
+  <p>
+    <a href="/faculty">&larr; Back to Faculty Directory</a>
+  </p>
+</main>
+
+<%- include('../partials/footer') %>
