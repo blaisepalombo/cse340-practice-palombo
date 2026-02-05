@@ -56,15 +56,69 @@ const app = express();
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Global template variables middleware (MUST be before routes)
+/**
+ * Configure Express middleware
+ */
+
+// 1) Log incoming requests
 app.use((req, res, next) => {
-  res.locals.NODE_ENV = NODE_ENV;
+  // Skip logging for routes that start with /. (like /.well-known/)
+  if (!req.path.startsWith('/.')) {
+    console.log(`${req.method} ${req.url}`);
+  }
+  next();
+});
+
+// 2) Make NODE_ENV available to all templates
+app.use((req, res, next) => {
+  res.locals.NODE_ENV = NODE_ENV || 'production';
+  next();
+});
+
+// 3) Add current year for copyright
+app.use((req, res, next) => {
+  res.locals.currentYear = new Date().getFullYear();
+  next();
+});
+
+// 4) Time-based greeting
+app.use((req, res, next) => {
+  const currentHour = new Date().getHours();
+
+  let message = '';
+  if (currentHour < 12) message = 'Good morning';
+  else if (currentHour < 18) message = 'Good afternoon';
+  else message = 'Good evening';
+
+  // Store a paragraph tag so it can be injected into the header
+  res.locals.greeting = `<p>${message}!</p>`;
+  next();
+});
+
+// 5) Random theme selection
+app.use((req, res, next) => {
+  const themes = ['blue-theme', 'green-theme', 'red-theme'];
+  const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+  res.locals.bodyClass = randomTheme;
+  next();
+});
+
+// 6) Share query parameters with templates
+app.use((req, res, next) => {
+  res.locals.queryParams = req.query || {};
   next();
 });
 
 // Set EJS as templating engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'src/views'));
+
+// Route-specific middleware that sets custom headers (demo page only)
+const addDemoHeaders = (req, res, next) => {
+  res.setHeader('X-Demo-Page', 'true');
+  res.setHeader('X-Middleware-Demo', 'Route-specific middleware is working');
+  next();
+};
 
 // Routes
 app.get('/', (req, res) => {
@@ -110,7 +164,6 @@ app.get('/catalog/:courseId', (req, res, next) => {
       break;
     case 'time':
     default:
-      // keep original order
       break;
   }
 
@@ -121,6 +174,11 @@ app.get('/catalog/:courseId', (req, res, next) => {
     course: { ...course, sections: sortedSections },
     currentSort: sortBy
   });
+});
+
+// Demo page route with header middleware
+app.get('/demo', addDemoHeaders, (req, res) => {
+  res.render('demo', { title: 'Middleware Demo Page' });
 });
 
 // When in development mode, start a WebSocket server for live reloading
