@@ -1,15 +1,17 @@
 {
-    "name": "cse340-practice-palombo",
-    "dependencies": {
-        "ejs": "^4.0.1",
-        "express": "^5.2.1"
-    },
-    "type": "module",
-    "scripts": {
-        "dev": "nodemon --env-file=.env server.js",
-        "start": "node server.js"
-    },
-    "devDependencies": {
-        "nodemon": "^3.1.11"
-    }
+  "name": "cse340-practice-palombo",
+  "type": "module",
+  "dependencies": {
+    "ejs": "^4.0.1",
+    "express": "^5.2.1"
+  },
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development nodemon --env-file=.env server.js",
+    "start": "node server.js"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "nodemon": "^3.1.11",
+    "ws": "^8.19.0"
+  }
 }
