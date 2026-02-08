@@ -1,5 +1,5 @@
 // server.js
-
+import { setupDatabase, testConnection } from './src/models/setup.js';
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
@@ -107,4 +107,10 @@ if (NODE_ENV.includes('dev')) {
  */
 app.listen(PORT, () => {
   console.log(`Server is running on http://127.0.0.1:${PORT}`);
+});
+
+app.listen(PORT, async () => {
+  await setupDatabase();
+  await testConnection();
+  console.log(`Server running on http://127.0.0.1:${PORT}`);
 });

@@ -2,17 +2,51 @@
  * Helper function to get the current greeting based on the time of day.
  */
 const getCurrentGreeting = () => {
-    const currentHour = new Date().getHours();
+  const currentHour = new Date().getHours();
 
-    if (currentHour < 12) {
-        return 'Good Morning!';
-    }
+  if (currentHour < 12) {
+    return 'Good Morning!';
+  }
 
-    if (currentHour < 18) {
-        return 'Good Afternoon!';
-    }
+  if (currentHour < 18) {
+    return 'Good Afternoon!';
+  }
 
-    return 'Good Evening!';
+  return 'Good Evening!';
+};
+
+/**
+ * Express middleware helper that adds head asset management functionality.
+ * - res.addStyle(css, priority)
+ * - res.addScript(js, priority)
+ * - res.locals.renderStyles()
+ * - res.locals.renderScripts()
+ */
+const setHeadAssetsFunctionality = (res) => {
+  res.locals.styles = [];
+  res.locals.scripts = [];
+
+  res.addStyle = (css, priority = 0) => {
+    res.locals.styles.push({ content: css, priority });
+  };
+
+  res.addScript = (js, priority = 0) => {
+    res.locals.scripts.push({ content: js, priority });
+  };
+
+  res.locals.renderStyles = () => {
+    return res.locals.styles
+      .sort((a, b) => b.priority - a.priority)
+      .map((item) => item.content)
+      .join('\n');
+  };
+
+  res.locals.renderScripts = () => {
+    return res.locals.scripts
+      .sort((a, b) => b.priority - a.priority)
+      .map((item) => item.content)
+      .join('\n');
+  };
 };
 
 /**
@@ -20,25 +54,28 @@ const getCurrentGreeting = () => {
  * Templates can access these values but are not required to use them.
  */
 const addLocalVariables = (req, res, next) => {
-    // Set current year for use in templates
-    res.locals.currentYear = new Date().getFullYear();
+  // Enable dynamic asset functionality on every request
+  setHeadAssetsFunctionality(res);
 
-    // Make NODE_ENV available to all templates
-    res.locals.NODE_ENV = process.env.NODE_ENV?.toLowerCase() || 'production';
+  // Set current year for use in templates
+  res.locals.currentYear = new Date().getFullYear();
 
-    // Make req.query available to all templates
-    res.locals.queryParams = { ...req.query };
+  // Make NODE_ENV available to all templates
+  res.locals.NODE_ENV = process.env.NODE_ENV?.toLowerCase() || 'production';
 
-    // Set greeting based on time of day
-    res.locals.greeting = `<p>${getCurrentGreeting()}</p>`;
+  // Make req.query available to all templates
+  res.locals.queryParams = { ...req.query };
 
-    // Randomly assign a theme class to the body
-    const themes = ['blue-theme', 'green-theme', 'red-theme'];
-    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
-    res.locals.bodyClass = randomTheme;
+  // Set greeting based on time of day
+  res.locals.greeting = `<p>${getCurrentGreeting()}</p>`;
 
-    // Continue to the next middleware or route handler
-    next();
+  // Randomly assign a theme class to the body
+  const themes = ['blue-theme', 'green-theme', 'red-theme'];
+  const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+  res.locals.bodyClass = randomTheme;
+
+  // Continue to the next middleware or route handler
+  next();
 };
 
 export { addLocalVariables };

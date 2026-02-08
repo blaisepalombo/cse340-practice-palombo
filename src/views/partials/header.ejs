@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
+
+    <!-- Global/base styles (always loaded) -->
     <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/catalog.css">
+
+    <!-- Dynamic section-specific styles & scripts -->
+    <%- renderStyles() %>
+    <%- renderScripts() %>
 
     <% if (NODE_ENV && NODE_ENV.includes('dev')) { %>
         <script>
