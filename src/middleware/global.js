@@ -51,7 +51,6 @@ const setHeadAssetsFunctionality = (res) => {
 
 /**
  * Middleware to add local variables to res.locals for use in all templates.
- * Templates can access these values but are not required to use them.
  */
 const addLocalVariables = (req, res, next) => {
   // Enable dynamic asset functionality on every request
@@ -74,7 +73,13 @@ const addLocalVariables = (req, res, next) => {
   const randomTheme = themes[Math.floor(Math.random() * themes.length)];
   res.locals.bodyClass = randomTheme;
 
-  // Continue to the next middleware or route handler
+  // ✅ Add login state for conditional navigation
+  res.locals.isLoggedIn = false;
+
+  if (req.session && req.session.user) {
+    res.locals.isLoggedIn = true;
+  }
+
   next();
 };
 

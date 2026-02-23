@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 // Middleware
 import { addDemoHeaders } from '../middleware/demo/headers.js';
+import { requireLogin } from '../middleware/auth.js';
 
 // Page controllers
 import { homePage, aboutPage, demoPage, testErrorPage } from './index.js';
@@ -17,6 +18,10 @@ import contactRoutes from './forms/contact.js';
 
 // Registration routes
 import registrationRoutes from './forms/registration.js';
+
+// ✅ Login routes
+import loginRoutes from './forms/login.js';
+import { processLogout, showDashboard } from './forms/login.js';
 
 const router = Router();
 
@@ -49,6 +54,12 @@ router.use('/register', (req, res, next) => {
   next();
 });
 
+// ✅ Add login-specific styles to all login routes
+router.use(['/login', '/dashboard'], (req, res, next) => {
+  res.addStyle('<link rel="stylesheet" href="/css/login.css">');
+  next();
+});
+
 /* ================================
    Mounted feature routes
    ================================ */
@@ -58,6 +69,9 @@ router.use('/contact', contactRoutes);
 
 // Registration routes (mounts GET /, POST /, GET /list)
 router.use('/register', registrationRoutes);
+
+// ✅ Login routes (mounts GET /login, POST /login)
+router.use('/login', loginRoutes);
 
 /* ================================
    Route definitions
@@ -74,6 +88,10 @@ router.get('/catalog/:slugId', courseDetailPage);
 // Faculty directory routes (slug-based)
 router.get('/faculty', facultyListPage);
 router.get('/faculty/:slugId', facultyDetailPage);
+
+// ✅ Auth-related root routes
+router.get('/logout', processLogout);
+router.get('/dashboard', requireLogin, showDashboard);
 
 // Demo page with route-specific middleware
 router.get('/demo', addDemoHeaders, demoPage);

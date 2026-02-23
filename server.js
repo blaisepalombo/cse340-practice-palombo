@@ -5,6 +5,12 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// ✅ Session + PG store
+import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
+import { caCert } from './src/models/db.js';
+import { startSessionCleanup } from './src/utils/session-cleanup.js';
+
 // Import MVC components
 import routes from './src/controllers/routes.js';
 import { addLocalVariables } from './src/middleware/global.js';
@@ -22,6 +28,42 @@ const PORT = process.env.PORT || 3000;
  * Setup Express Server
  */
 const app = express();
+
+/**
+ * ✅ Session middleware MUST be after app is created,
+ * and before routes/middleware that rely on req.session.
+ */
+const pgSession = connectPgSimple(session);
+
+app.use(
+  session({
+    store: new pgSession({
+      conObject: {
+        connectionString: process.env.DB_URL,
+        // Configure SSL for session store connection (required by BYU-I databases)
+        ssl: {
+          ca: caCert,
+          rejectUnauthorized: true,
+          checkServerIdentity: () => undefined
+        }
+      },
+      tableName: 'session',
+      createTableIfMissing: true
+    }),
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      // use HTTP in dev, HTTPS in production
+      secure: NODE_ENV.includes('dev') !== true,
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000
+    }
+  })
+);
+
+// ✅ Start automatic session cleanup (after session config)
+startSessionCleanup();
 
 /**
  * Configure Express
