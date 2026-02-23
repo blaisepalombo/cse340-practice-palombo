@@ -12,6 +12,9 @@ import { catalogPage, courseDetailPage } from './catalog/catalog.js';
 // Faculty controllers
 import { facultyListPage, facultyDetailPage } from './faculty/faculty.js';
 
+// Contact routes
+import contactRoutes from './forms/contact.js';
+
 const router = Router();
 
 /* ================================
@@ -30,6 +33,19 @@ router.use('/faculty', (req, res, next) => {
   res.addStyle('<link rel="stylesheet" href="/css/faculty.css">');
   next();
 });
+
+// Add contact-specific styles to all contact routes
+router.use('/contact', (req, res, next) => {
+  res.addStyle('<link rel="stylesheet" href="/css/contact.css">');
+  next();
+});
+
+/* ================================
+   Mounted feature routes
+   ================================ */
+
+// Contact form routes (mounts GET /, POST /, GET /responses)
+router.use('/contact', contactRoutes);
 
 /* ================================
    Route definitions
