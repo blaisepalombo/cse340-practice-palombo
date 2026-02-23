@@ -5,7 +5,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// ✅ Session + PG store
+// Session + PG store
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import { caCert } from './src/models/db.js';
@@ -30,7 +30,13 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 
 /**
- * ✅ Session middleware MUST be after app is created,
+ * IMPORTANT FOR RENDER (behind proxy):
+ * Allows Express to correctly detect HTTPS so secure cookies work.
+ */
+app.set('trust proxy', 1);
+
+/**
+ * Session middleware MUST be after app is created,
  * and before routes/middleware that rely on req.session.
  */
 const pgSession = connectPgSimple(session);
@@ -54,15 +60,19 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      // use HTTP in dev, HTTPS in production
-      secure: NODE_ENV.includes('dev') !== true,
+      /**
+       * Use secure cookies automatically when HTTPS is detected.
+       * Works correctly on Render when trust proxy is enabled.
+       */
+      secure: 'auto',
       httpOnly: true,
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000
     }
   })
 );
 
-// ✅ Start automatic session cleanup (after session config)
+// Start automatic session cleanup (after session config)
 startSessionCleanup();
 
 /**
