@@ -15,6 +15,9 @@ import { facultyListPage, facultyDetailPage } from './faculty/faculty.js';
 // Contact routes
 import contactRoutes from './forms/contact.js';
 
+// Registration routes
+import registrationRoutes from './forms/registration.js';
+
 const router = Router();
 
 /* ================================
@@ -40,12 +43,21 @@ router.use('/contact', (req, res, next) => {
   next();
 });
 
+// Add registration-specific styles to all registration routes
+router.use('/register', (req, res, next) => {
+  res.addStyle('<link rel="stylesheet" href="/css/registration.css">');
+  next();
+});
+
 /* ================================
    Mounted feature routes
    ================================ */
 
 // Contact form routes (mounts GET /, POST /, GET /responses)
 router.use('/contact', contactRoutes);
+
+// Registration routes (mounts GET /, POST /, GET /list)
+router.use('/register', registrationRoutes);
 
 /* ================================
    Route definitions
