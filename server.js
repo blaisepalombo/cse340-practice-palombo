@@ -11,6 +11,9 @@ import connectPgSimple from 'connect-pg-simple';
 import { caCert } from './src/models/db.js';
 import { startSessionCleanup } from './src/utils/session-cleanup.js';
 
+// ✅ Flash middleware
+import flash from './src/middleware/flash.js';
+
 // Import MVC components
 import routes from './src/controllers/routes.js';
 import { addLocalVariables } from './src/middleware/global.js';
@@ -91,6 +94,11 @@ app.set('views', path.join(__dirname, 'src/views'));
  * Global Middleware
  */
 app.use(addLocalVariables);
+
+/**
+ * ✅ Flash middleware (must run after session + global middleware, before routes)
+ */
+app.use(flash);
 
 /**
  * Routes

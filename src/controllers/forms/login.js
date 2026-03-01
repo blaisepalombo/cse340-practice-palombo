@@ -35,7 +35,9 @@ const processLogin = async (req, res) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    console.log('Validation errors:', errors.array());
+    errors.array().forEach((error) => {
+      req.flash('error', error.msg);
+    });
     return res.redirect('/login');
   }
 
@@ -44,28 +46,32 @@ const processLogin = async (req, res) => {
   try {
     const user = await findUserByEmail(email);
 
+    // Prevent account enumeration: same message for all auth failures
     if (!user) {
-      console.log('User not found');
+      req.flash('error', 'Invalid email or password');
       return res.redirect('/login');
     }
 
     const passwordIsValid = await verifyPassword(password, user.password);
 
     if (!passwordIsValid) {
-      console.log('Invalid password');
+      req.flash('error', 'Invalid email or password');
       return res.redirect('/login');
     }
 
     // Remove password before storing in session
     delete user.password;
-
     req.session.user = user;
 
-    res.redirect('/dashboard');
+    // Personalized success message
+    const displayName = user.name || 'there';
+    req.flash('success', `Welcome, ${displayName}!`);
 
+    return res.redirect('/dashboard');
   } catch (error) {
     console.error('Login error:', error);
-    res.redirect('/login');
+    req.flash('error', 'Unable to log you in right now. Please try again later.');
+    return res.redirect('/login');
   }
 };
 
