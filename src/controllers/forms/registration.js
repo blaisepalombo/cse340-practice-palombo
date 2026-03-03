@@ -118,6 +118,8 @@ const processRegistration = async (req, res) => {
 
 /**
  * Display all registered users.
+ * IMPORTANT: Pass the current logged-in user to the view as `user`
+ * so list.ejs can decide which buttons to show.
  */
 const showAllUsers = async (req, res) => {
   let users = [];
@@ -128,10 +130,12 @@ const showAllUsers = async (req, res) => {
     console.error('Error retrieving users:', error);
   }
 
+  const currentUser = req.session && req.session.user ? req.session.user : null;
+
   res.render('forms/registration/list', {
     title: 'Registered Users',
     users,
-    user: req.session && req.session.user ? req.session.user : null
+    user: currentUser
   });
 };
 
@@ -150,6 +154,7 @@ const showEditAccountForm = async (req, res) => {
     return res.redirect('/register/list');
   }
 
+  // Check permissions
   const canEdit = currentUser.id === targetUserId || currentUser.roleName === 'admin';
   if (!canEdit) {
     req.flash('error', 'You do not have permission to edit this account.');
@@ -187,22 +192,24 @@ const processEditAccount = async (req, res) => {
       return res.redirect('/register/list');
     }
 
+    // Check permissions
     const canEdit = currentUser.id === targetUserId || currentUser.roleName === 'admin';
     if (!canEdit) {
       req.flash('error', 'You do not have permission to edit this account.');
       return res.redirect('/register/list');
     }
 
-    // If email changed, ensure it's not taken by someone else
+    // Check if new email already exists (and belongs to different user)
     const emailTaken = await emailExists(email);
     if (emailTaken && targetUser.email !== email) {
       req.flash('error', 'An account with this email already exists.');
       return res.redirect(`/register/${targetUserId}/edit`);
     }
 
+    // Update the user
     await updateUser(targetUserId, name, email);
 
-    // If user edited self, update session
+    // If user edited their own account, update session
     if (currentUser.id === targetUserId) {
       req.session.user.name = name;
       req.session.user.email = email;
@@ -225,11 +232,13 @@ const processDeleteAccount = async (req, res) => {
   const targetUserId = parseInt(req.params.id, 10);
   const currentUser = req.session.user;
 
+  // Only admins can delete accounts
   if (currentUser.roleName !== 'admin') {
     req.flash('error', 'You do not have permission to delete accounts.');
     return res.redirect('/register/list');
   }
 
+  // Prevent admins from deleting their own account
   if (currentUser.id === targetUserId) {
     req.flash('error', 'You cannot delete your own account.');
     return res.redirect('/register/list');
@@ -252,33 +261,16 @@ const processDeleteAccount = async (req, res) => {
 };
 
 /**
- * GET /register - Display the registration form
+ * Routes
  */
 router.get('/', showRegistrationForm);
-
-/**
- * POST /register - Handle registration form submission with validation
- */
 router.post('/', registrationValidation, processRegistration);
 
-/**
- * GET /register/list - Display all registered users
- */
 router.get('/list', showAllUsers);
 
-/**
- * GET /register/:id/edit - Display edit account form
- */
 router.get('/:id/edit', requireLogin, showEditAccountForm);
-
-/**
- * POST /register/:id/edit - Process account edit
- */
 router.post('/:id/edit', requireLogin, editValidation, processEditAccount);
 
-/**
- * POST /register/:id/delete - Delete user account
- */
 router.post('/:id/delete', requireLogin, processDeleteAccount);
 
 export default router;

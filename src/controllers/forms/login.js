@@ -1,12 +1,9 @@
 import { body, validationResult } from 'express-validator';
-import { findUserByEmail, verifyPassword } from '../../models/forms/login.js';
+import { findUserByEmail, findUserByIdWithRole, verifyPassword } from '../../models/forms/login.js';
 import { Router } from 'express';
 
 const router = Router();
 
-/**
- * Validation rules for login form
- */
 const loginValidation = [
   body('email')
     .trim()
@@ -20,28 +17,18 @@ const loginValidation = [
     .notEmpty()
     .withMessage('Password is required')
     .isLength({ min: 8, max: 128 })
-    .withMessage('Password must be between 8 and 128 characters')
+    .withMessage('Password must be between 8 and 128 characters'),
 ];
 
-/**
- * Display the login form.
- */
 const showLoginForm = (req, res) => {
-  res.render('forms/login/form', {
-    title: 'User Login'
-  });
+  res.render('forms/login/form', { title: 'User Login' });
 };
 
-/**
- * Process login form submission.
- */
 const processLogin = async (req, res) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    errors.array().forEach((error) => {
-      req.flash('error', error.msg);
-    });
+    errors.array().forEach((error) => req.flash('error', error.msg));
     return res.redirect('/login');
   }
 
@@ -49,15 +36,14 @@ const processLogin = async (req, res) => {
 
   try {
     const user = await findUserByEmail(email);
+    console.log("USER FROM DB:", user);
 
-    // Prevent account enumeration: same message for all auth failures
     if (!user) {
       req.flash('error', 'Invalid email or password');
       return res.redirect('/login');
     }
 
     const passwordIsValid = await verifyPassword(password, user.password);
-
     if (!passwordIsValid) {
       req.flash('error', 'Invalid email or password');
       return res.redirect('/login');
@@ -65,12 +51,26 @@ const processLogin = async (req, res) => {
 
     // Remove password before storing in session
     delete user.password;
-    req.session.user = user;
 
-    // Personalized success message
-    const displayName = user.name || 'there';
-    req.flash('success', `Welcome, ${displayName}!`);
+    // Ensure roleName is present (belt + suspenders)
+    const freshUser = await findUserByIdWithRole(user.id);
+    if (!freshUser) {
+      req.flash('error', 'Login failed. User record not found.');
+      return res.redirect('/login');
+    }
 
+    // Regenerate session to prevent fixation + avoid stale session objects
+    await new Promise((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+
+    req.session.user = freshUser;
+
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
+
+    req.flash('success', `Welcome, ${freshUser.name || 'there'}!`);
     return res.redirect('/dashboard');
   } catch (error) {
     console.error('Login error:', error);
@@ -79,13 +79,8 @@ const processLogin = async (req, res) => {
   }
 };
 
-/**
- * Handle user logout.
- */
 const processLogout = (req, res) => {
-  if (!req.session) {
-    return res.redirect('/');
-  }
+  if (!req.session) return res.redirect('/');
 
   req.session.destroy((err) => {
     if (err) {
@@ -93,38 +88,41 @@ const processLogout = (req, res) => {
       res.clearCookie('connect.sid');
       return res.redirect('/');
     }
-
     res.clearCookie('connect.sid');
-    res.redirect('/');
+    return res.redirect('/');
   });
 };
 
-/**
- * Display protected dashboard (requires login).
- */
-const showDashboard = (req, res) => {
-  const user = req.session.user;
-  const sessionData = req.session;
+const showDashboard = async (req, res) => {
+  try {
+    const sessionUser = req.session.user;
 
-  // Extra security check to ensure password is not present
-  if (user && user.password) {
-    console.error('Security error: password found in user object');
-    delete user.password;
+    // Safety: requireLogin should guarantee this, but avoid crashes
+    if (!sessionUser) return res.redirect('/login');
+
+    // Always refresh so roleName is never missing
+    const freshUser = await findUserByIdWithRole(sessionUser.id);
+
+    if (freshUser) {
+      req.session.user = freshUser;
+      await new Promise((resolve) => req.session.save(() => resolve()));
+    }
+
+    return res.render('dashboard', {
+      title: 'Dashboard',
+      user: freshUser || sessionUser,
+      sessionData: req.session,
+    });
+  } catch (err) {
+    console.error('Dashboard load error:', err);
+    return res.render('dashboard', {
+      title: 'Dashboard',
+      user: req.session.user,
+      sessionData: req.session,
+    });
   }
-
-  if (sessionData.user && sessionData.user.password) {
-    console.error('Security error: password found in sessionData.user');
-    delete sessionData.user.password;
-  }
-
-  res.render('dashboard', {
-    title: 'Dashboard',
-    user,
-    sessionData
-  });
 };
 
-// Routes
 router.get('/', showLoginForm);
 router.post('/', loginValidation, processLogin);
 
