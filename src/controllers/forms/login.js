@@ -1,24 +1,9 @@
-import { body, validationResult } from 'express-validator';
+import { validationResult } from 'express-validator';
 import { findUserByEmail, findUserByIdWithRole, verifyPassword } from '../../models/forms/login.js';
 import { Router } from 'express';
+import { loginValidation } from '../../middleware/validation/forms.js';
 
 const router = Router();
-
-const loginValidation = [
-  body('email')
-    .trim()
-    .isEmail()
-    .withMessage('Please provide a valid email address')
-    .normalizeEmail()
-    .isLength({ max: 255 })
-    .withMessage('Email address is too long'),
-
-  body('password')
-    .notEmpty()
-    .withMessage('Password is required')
-    .isLength({ min: 8, max: 128 })
-    .withMessage('Password must be between 8 and 128 characters'),
-];
 
 const showLoginForm = (req, res) => {
   res.render('forms/login/form', { title: 'User Login' });
@@ -49,17 +34,14 @@ const processLogin = async (req, res) => {
       return res.redirect('/login');
     }
 
-    // Remove password before storing in session
     delete user.password;
 
-    // Ensure roleName is present (belt + suspenders)
     const freshUser = await findUserByIdWithRole(user.id);
     if (!freshUser) {
       req.flash('error', 'Login failed. User record not found.');
       return res.redirect('/login');
     }
 
-    // Regenerate session to prevent fixation + avoid stale session objects
     await new Promise((resolve, reject) => {
       req.session.regenerate((err) => (err ? reject(err) : resolve()));
     });
@@ -97,10 +79,8 @@ const showDashboard = async (req, res) => {
   try {
     const sessionUser = req.session.user;
 
-    // Safety: requireLogin should guarantee this, but avoid crashes
     if (!sessionUser) return res.redirect('/login');
 
-    // Always refresh so roleName is never missing
     const freshUser = await findUserByIdWithRole(sessionUser.id);
 
     if (freshUser) {

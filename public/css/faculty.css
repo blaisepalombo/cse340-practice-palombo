@@ -1,0 +1,42 @@
+/* Grid layout for the directory */
+.faculty-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+/* Simple card styling to match main.css */
+.faculty-card {
+  position: relative;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 12px;
+  background: #fff;
+}
+
+.faculty-card h3 {
+  margin: 6px 0 8px;
+}
+
+.faculty-card p {
+  margin: 6px 0;
+}
+
+/* Required image styling + placeholder trick */
+.faculty-photo {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+  margin-bottom: 7px;
+  background: url("https://placehold.co/480") center / cover no-repeat;
+  border-radius: 6px;
+}
+
+/* Detail page image: keep it from being huge */
+.faculty-detail-photo {
+  max-width: 360px;
+  width: 100%;
+  margin: 0 0 12px;
+}

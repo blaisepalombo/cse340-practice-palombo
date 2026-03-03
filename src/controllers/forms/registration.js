@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { body, validationResult } from 'express-validator';
+import { validationResult } from 'express-validator';
 import bcrypt from 'bcrypt';
 import {
   emailExists,
@@ -10,69 +10,9 @@ import {
   deleteUser
 } from '../../models/forms/registration.js';
 import { requireLogin } from '../../middleware/auth.js';
+import { registrationValidation, updateAccountValidation } from '../../middleware/validation/forms.js';
 
 const router = Router();
-
-/**
- * Validation rules for user registration
- */
-const registrationValidation = [
-  body('name')
-    .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Name must be between 2 and 100 characters')
-    .matches(/^[a-zA-Z\s'-]+$/)
-    .withMessage("Name can only contain letters, spaces, hyphens, and apostrophes"),
-
-  body('email')
-    .trim()
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Must be a valid email address')
-    .isLength({ max: 255 })
-    .withMessage('Email address is too long'),
-
-  body('emailConfirm')
-    .trim()
-    .custom((value, { req }) => value === req.body.email)
-    .withMessage('Email addresses must match'),
-
-  body('password')
-    .isLength({ min: 8, max: 128 })
-    .withMessage('Password must be between 8 and 128 characters')
-    .matches(/[0-9]/)
-    .withMessage('Password must contain at least one number')
-    .matches(/[a-z]/)
-    .withMessage('Password must contain at least one lowercase letter')
-    .matches(/[A-Z]/)
-    .withMessage('Password must contain at least one uppercase letter')
-    .matches(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/)
-    .withMessage('Password must contain at least one special character'),
-
-  body('passwordConfirm')
-    .custom((value, { req }) => value === req.body.password)
-    .withMessage('Passwords must match'),
-];
-
-/**
- * Validation rules for editing user accounts
- */
-const editValidation = [
-  body('name')
-    .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Name must be between 2 and 100 characters')
-    .matches(/^[a-zA-Z\s'-]+$/)
-    .withMessage("Name can only contain letters, spaces, hyphens, and apostrophes"),
-
-  body('email')
-    .trim()
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Must be a valid email address')
-    .isLength({ max: 255 })
-    .withMessage('Email address is too long')
-];
 
 /**
  * Display the registration form page.
@@ -118,8 +58,6 @@ const processRegistration = async (req, res) => {
 
 /**
  * Display all registered users.
- * IMPORTANT: Pass the current logged-in user to the view as `user`
- * so list.ejs can decide which buttons to show.
  */
 const showAllUsers = async (req, res) => {
   let users = [];
@@ -141,7 +79,6 @@ const showAllUsers = async (req, res) => {
 
 /**
  * Display the edit account form
- * Users can edit their own account, admins can edit any account
  */
 const showEditAccountForm = async (req, res) => {
   const targetUserId = parseInt(req.params.id, 10);
@@ -154,7 +91,6 @@ const showEditAccountForm = async (req, res) => {
     return res.redirect('/register/list');
   }
 
-  // Check permissions
   const canEdit = currentUser.id === targetUserId || currentUser.roleName === 'admin';
   if (!canEdit) {
     req.flash('error', 'You do not have permission to edit this account.');
@@ -192,24 +128,20 @@ const processEditAccount = async (req, res) => {
       return res.redirect('/register/list');
     }
 
-    // Check permissions
     const canEdit = currentUser.id === targetUserId || currentUser.roleName === 'admin';
     if (!canEdit) {
       req.flash('error', 'You do not have permission to edit this account.');
       return res.redirect('/register/list');
     }
 
-    // Check if new email already exists (and belongs to different user)
     const emailTaken = await emailExists(email);
     if (emailTaken && targetUser.email !== email) {
       req.flash('error', 'An account with this email already exists.');
       return res.redirect(`/register/${targetUserId}/edit`);
     }
 
-    // Update the user
     await updateUser(targetUserId, name, email);
 
-    // If user edited their own account, update session
     if (currentUser.id === targetUserId) {
       req.session.user.name = name;
       req.session.user.email = email;
@@ -226,19 +158,16 @@ const processEditAccount = async (req, res) => {
 
 /**
  * Process account deletion
- * Only admins can delete accounts, and they cannot delete themselves
  */
 const processDeleteAccount = async (req, res) => {
   const targetUserId = parseInt(req.params.id, 10);
   const currentUser = req.session.user;
 
-  // Only admins can delete accounts
   if (currentUser.roleName !== 'admin') {
     req.flash('error', 'You do not have permission to delete accounts.');
     return res.redirect('/register/list');
   }
 
-  // Prevent admins from deleting their own account
   if (currentUser.id === targetUserId) {
     req.flash('error', 'You cannot delete your own account.');
     return res.redirect('/register/list');
@@ -269,7 +198,7 @@ router.post('/', registrationValidation, processRegistration);
 router.get('/list', showAllUsers);
 
 router.get('/:id/edit', requireLogin, showEditAccountForm);
-router.post('/:id/edit', requireLogin, editValidation, processEditAccount);
+router.post('/:id/edit', requireLogin, updateAccountValidation, processEditAccount);
 
 router.post('/:id/delete', requireLogin, processDeleteAccount);
 

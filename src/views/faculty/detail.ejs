@@ -3,6 +3,12 @@
 <main>
   <h1><%= facultyMember.name %></h1>
 
+  <img
+    class="faculty-photo faculty-detail-photo"
+    src="/images/faculty/<%= facultyMember.slug %>.jpg"
+    alt="<%= facultyMember.name %> profile photo"
+  />
+
   <div class="faculty-detail">
     <p><strong>Title:</strong> <%= facultyMember.title %></p>
     <p><strong>Department:</strong> <%= facultyMember.department %></p>
